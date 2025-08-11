@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Weather Service</title>
+  <style>
+    body{font-family:Arial, sans-serif;background:#f5f7fa;padding:24px}
+    .container{max-width:900px;margin:0 auto}
+    table{width:100%;border-collapse:collapse;background:#fff}
+    th,td{padding:10px;border:1px solid #e5e7eb}
+    th{background:#f1f5f9;text-align:left}
+    .actions{margin-bottom:16px}
+    a.button{padding:8px 12px;border-radius:6px;background:#16a34a;color:#fff;text-decoration:none}
+    .msg{color:green}
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Weather Service</h1>
+
+  <div class="actions">
+    <a th:href="@{/weatherform}" class="button">+ New Weather Record</a>
+    <span th:if="${message}" th:text="${message}" class="msg"></span>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Temperature</th>
+        <th>PM 2.5</th>
+        <th>Weather Condition</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr th:each="w : ${weather}">
+        <td th:text="${w.date}">2025-08-12</td>
+        <td th:text="${w.temperature}">31</td>
+        <td th:text="${w.pm25}">25</td>
+        <td th:text="${w.weathercondition}">0</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</body>
+</html>
