@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Weather Service</title>
+  <title>Cat Food Products</title>
   <style>
     body{font-family:Arial, sans-serif;background:#f5f7fa;padding:24px}
     .container{max-width:900px;margin:0 auto}
@@ -16,28 +16,31 @@
 </head>
 <body>
 <div class="container">
-  <h1>Weather Service</h1>
+  <h1>Cat Food Products</h1>
 
   <div class="actions">
-    <a th:href="@{/weatherform}" class="button">+ New Weather Record</a>
+    <a th:href="@{/productform}" class="button">+ New Product</a>
     <span th:if="${message}" th:text="${message}" class="msg"></span>
   </div>
 
   <table>
     <thead>
       <tr>
-        <th>Date</th>
-        <th>Temperature</th>
-        <th>PM 2.5</th>
-        <th>Weather Condition</th>
+        <th>Code</th>
+        <th>Name</th>
+        <th>Price</th>
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody>
-      <tr th:each="w : ${weather}">
-        <td th:text="${w.date}">2025-08-12</td>
-        <td th:text="${w.temperature}">31</td>
-        <td th:text="${w.pm25}">25</td>
-        <td th:text="${w.weathercondition}">0</td>
+      <tr th:each="p : ${products}">
+        <td th:text="${p.code}">P001</td>
+        <td th:text="${p.name}">Cat Food</td>
+        <td th:text="${p.price}">100</td>
+        <td>
+          <a th:href="@{'/productform/' + ${p.code}}">Edit</a>
+          <a th:href="@{'/delete/' + ${p.code}}">Delete</a>
+        </td>
       </tr>
     </tbody>
   </table>

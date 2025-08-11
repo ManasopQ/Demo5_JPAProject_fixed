@@ -1,4 +1,4 @@
-package com.stou.demo5_jpaproject.weather.weather;
+package com.stou.demo5_jpaproject.weather.catfood;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -10,12 +10,11 @@ import lombok.AllArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 
-public class Weather {
+public class CatFood {
     @Id
-    private String date;
-    private String temperature;
-    private String pm25;
-    private int weathercondition;
+    private String code;
+    private String name;
+    private double price;
 }
 
 
