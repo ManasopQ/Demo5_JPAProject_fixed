@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /**
  * Represents a line of lyric with its start time in milliseconds.
@@ -31,6 +32,7 @@ fun LyricView(
     lyrics: List<LyricLine>,
     currentTime: Long,
     modifier: Modifier = Modifier,
+    fontSize: Int = 16,
     onLineClick: (LyricLine) -> Unit = {}
 ) {
     val listState = rememberLazyListState()
@@ -72,7 +74,7 @@ fun LyricView(
             ) {
                 Text(
                     text = line.text,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = fontSize.sp),
                     color = if (isActive) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onBackground
                 )

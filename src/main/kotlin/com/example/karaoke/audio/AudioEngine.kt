@@ -1,6 +1,7 @@
 package com.example.karaoke.audio
 
 import java.io.File
+import kotlinx.serialization.Serializable
 
 /** Simple abstraction for audio playback so different engines can be swapped. */
 interface AudioEngine {
@@ -36,7 +37,11 @@ interface AudioEngine {
      * range 0.0–1.0. Pass `null` to remove the listener.
      */
     fun setLevelListener(listener: ((rms: Float, peak: Float) -> Unit)?)
+
+    /** Set playback volume in range 0.0–1.0. */
+    fun setVolume(volume: Float)
 }
 
 /** Available audio backends. */
+@Serializable
 enum class EngineType { JavaFX, TarsosDSP }
