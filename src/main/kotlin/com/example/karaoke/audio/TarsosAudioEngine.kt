@@ -5,6 +5,7 @@ import be.tarsos.dsp.AudioEvent
 import be.tarsos.dsp.AudioProcessor
 import be.tarsos.dsp.effects.PitchShifter
 import be.tarsos.dsp.effects.RateTransposer
+import be.tarsos.dsp.GainProcessor
 import be.tarsos.dsp.io.jvm.AudioDispatcherFactory
 import be.tarsos.dsp.io.jvm.AudioPlayer
 import java.io.File
@@ -23,6 +24,7 @@ class TarsosAudioEngine : AudioEngine {
     private var pitch: Float = 0f
     private var position: Long = 0L
     private var levelListener: ((Float, Float) -> Unit)? = null
+    private var volume: Float = 1f
 
     private val sampleRate = 44_100
     private val bufferSize = 2048
@@ -42,6 +44,7 @@ class TarsosAudioEngine : AudioEngine {
         val shift = PitchShifter(2f.pow(pitch / 12f), bufferSize, overlap)
         d.addAudioProcessor(rate)
         d.addAudioProcessor(shift)
+        d.addAudioProcessor(GainProcessor(volume.toDouble()))
         d.addAudioProcessor(object : AudioProcessor {
             override fun process(event: AudioEvent): Boolean {
                 val buffer = event.floatBuffer
@@ -99,5 +102,10 @@ class TarsosAudioEngine : AudioEngine {
 
     override fun setLevelListener(listener: ((rms: Float, peak: Float) -> Unit)?) {
         levelListener = listener
+    }
+
+    override fun setVolume(volume: Float) {
+        this.volume = volume
+        buildDispatcher(position)
     }
 }

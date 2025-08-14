@@ -64,4 +64,8 @@ class JavaFXAudioEngine : AudioEngine {
     override fun setLevelListener(listener: ((rms: Float, peak: Float) -> Unit)?) {
         levelListener = listener
     }
+
+    override fun setVolume(volume: Float) {
+        player?.volume = volume.toDouble()
+    }
 }
