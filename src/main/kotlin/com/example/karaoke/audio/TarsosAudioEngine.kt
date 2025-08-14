@@ -10,7 +10,9 @@ import be.tarsos.dsp.io.jvm.AudioPlayer
 import java.io.File
 import javax.sound.sampled.AudioFormat
 import kotlin.concurrent.thread
+import kotlin.math.abs
 import kotlin.math.pow
+import kotlin.math.sqrt
 
 /** Audio engine using the TarsosDSP library. */
 class TarsosAudioEngine : AudioEngine {
@@ -20,6 +22,7 @@ class TarsosAudioEngine : AudioEngine {
     private var tempo: Float = 1f
     private var pitch: Float = 0f
     private var position: Long = 0L
+    private var levelListener: ((Float, Float) -> Unit)? = null
 
     private val sampleRate = 44_100
     private val bufferSize = 2048
@@ -41,6 +44,16 @@ class TarsosAudioEngine : AudioEngine {
         d.addAudioProcessor(shift)
         d.addAudioProcessor(object : AudioProcessor {
             override fun process(event: AudioEvent): Boolean {
+                val buffer = event.floatBuffer
+                var peak = 0f
+                var sum = 0f
+                for (s in buffer) {
+                    val a = abs(s)
+                    sum += a * a
+                    if (a > peak) peak = a
+                }
+                val rms = sqrt(sum / buffer.size)
+                levelListener?.invoke(rms, peak)
                 position += (1000L * event.bufferSize / sampleRate)
                 return true
             }
@@ -82,5 +95,9 @@ class TarsosAudioEngine : AudioEngine {
     override fun setPitch(semitones: Float) {
         this.pitch = semitones
         buildDispatcher(position)
+    }
+
+    override fun setLevelListener(listener: ((rms: Float, peak: Float) -> Unit)?) {
+        levelListener = listener
     }
 }

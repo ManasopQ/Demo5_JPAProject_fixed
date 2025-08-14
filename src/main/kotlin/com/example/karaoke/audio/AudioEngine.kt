@@ -30,6 +30,12 @@ interface AudioEngine {
      * negative lowers. The range is expected to be within ±6 semitones.
      */
     fun setPitch(semitones: Float)
+
+    /**
+     * Register [listener] to receive real-time RMS and peak levels in the
+     * range 0.0–1.0. Pass `null` to remove the listener.
+     */
+    fun setLevelListener(listener: ((rms: Float, peak: Float) -> Unit)?)
 }
 
 /** Available audio backends. */
