@@ -11,6 +11,14 @@ import ui.PlaylistPanel
 import com.example.karaoke.lyrics.LrcWriter
 import com.example.karaoke.model.PlaylistStorage
 import com.example.karaoke.model.Track
+import com.example.karaoke.audio.AudioEngine
+import com.example.karaoke.audio.EngineType
+import com.example.karaoke.audio.JavaFXAudioEngine
+import com.example.karaoke.audio.TarsosAudioEngine
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.Column
 import java.io.File
 
 /**
@@ -50,20 +58,47 @@ fun main() = application {
             }
             var currentTime by remember { mutableStateOf(0L) }
             var isPlaying by remember { mutableStateOf(false) }
+            var engineType by remember { mutableStateOf(EngineType.JavaFX) }
+            var audioEngine by remember { mutableStateOf<AudioEngine>(JavaFXAudioEngine()) }
+            var tempo by remember { mutableStateOf(1f) }
+            var pitch by remember { mutableStateOf(0f) }
             val tapTimes = remember { mutableStateListOf<Long>() }
             var tapRunning by remember { mutableStateOf(false) }
 
-            LaunchedEffect(isPlaying, currentTrackIndex) {
+            LaunchedEffect(engineType) {
+                val pos = currentTime
+                audioEngine.stop()
+                audioEngine = when (engineType) {
+                    EngineType.JavaFX -> JavaFXAudioEngine()
+                    EngineType.TarsosDSP -> TarsosAudioEngine()
+                }
+                if (currentTrackIndex in playlist.indices) {
+                    val track = playlist[currentTrackIndex]
+                    audioEngine.load(File(track.audioPath))
+                    audioEngine.setTempo(tempo)
+                    audioEngine.setPitch(pitch)
+                    audioEngine.seek(pos)
+                    if (isPlaying) audioEngine.play()
+                }
+            }
+
+            LaunchedEffect(isPlaying, currentTrackIndex, audioEngine) {
                 while (isPlaying && currentTrackIndex in playlist.indices) {
                     delay(100)
-                    currentTime += 100
+                    currentTime = audioEngine.positionMs()
                     val duration = playlist[currentTrackIndex].durationMs
                     if (currentTime >= duration) {
                         if (currentTrackIndex + 1 < playlist.size) {
                             currentTrackIndex++
                             currentTime = 0L
+                            val track = playlist[currentTrackIndex]
+                            audioEngine.load(File(track.audioPath))
+                            audioEngine.setTempo(tempo)
+                            audioEngine.setPitch(pitch)
+                            audioEngine.play()
                         } else {
                             isPlaying = false
+                            audioEngine.stop()
                         }
                     }
                 }
@@ -110,6 +145,11 @@ fun main() = application {
                     onPlay = { index ->
                         currentTrackIndex = index
                         currentTime = 0L
+                        val track = playlist[index]
+                        audioEngine.load(File(track.audioPath))
+                        audioEngine.setTempo(tempo)
+                        audioEngine.setPitch(pitch)
+                        audioEngine.play()
                         isPlaying = true
                     },
                     onAdd = {
@@ -139,12 +179,22 @@ fun main() = application {
                         if (currentTrackIndex + 1 < playlist.size) {
                             currentTrackIndex++
                             currentTime = 0L
+                            val track = playlist[currentTrackIndex]
+                            audioEngine.load(File(track.audioPath))
+                            audioEngine.setTempo(tempo)
+                            audioEngine.setPitch(pitch)
+                            if (isPlaying) audioEngine.play()
                         }
                     },
                     onPrev = {
                         if (currentTrackIndex > 0) {
                             currentTrackIndex--
                             currentTime = 0L
+                            val track = playlist[currentTrackIndex]
+                            audioEngine.load(File(track.audioPath))
+                            audioEngine.setTempo(tempo)
+                            audioEngine.setPitch(pitch)
+                            if (isPlaying) audioEngine.play()
                         }
                     },
                     modifier = Modifier.width(200.dp)
@@ -154,8 +204,37 @@ fun main() = application {
                     lyrics = lyrics,
                     currentTime = currentTime,
                     modifier = Modifier.weight(1f),
-                    onLineClick = { line -> currentTime = line.timeMillis }
+                    onLineClick = { line ->
+                        currentTime = line.timeMillis
+                        audioEngine.seek(line.timeMillis)
+                    }
                 )
+                Column(modifier = Modifier.width(200.dp).padding(8.dp)) {
+                    Text("Engine: ${engineType.name}")
+                    Row {
+                        Button(onClick = { engineType = EngineType.JavaFX }) { Text("JavaFX") }
+                        Spacer(Modifier.width(4.dp))
+                        Button(onClick = { engineType = EngineType.TarsosDSP }) { Text("TarsosDSP") }
+                    }
+                    Text("Tempo: ${"%.2f".format(tempo)}x")
+                    Slider(
+                        value = tempo,
+                        onValueChange = {
+                            tempo = it
+                            audioEngine.setTempo(it)
+                        },
+                        valueRange = 0.5f..1.5f
+                    )
+                    Text("Pitch: ${"%.1f".format(pitch)} st")
+                    Slider(
+                        value = pitch,
+                        onValueChange = {
+                            pitch = it
+                            audioEngine.setPitch(it)
+                        },
+                        valueRange = -6f..6f
+                    )
+                }
             }
         }
     }
