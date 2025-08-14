@@ -4,10 +4,14 @@ import androidx.compose.ui.window.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import ui.LyricLine
 import ui.LyricView
 import ui.TapSyncPanel
 import ui.PlaylistPanel
+import ui.WaveformView
+import ui.LevelMeter
 import com.example.karaoke.lyrics.LrcWriter
 import com.example.karaoke.model.PlaylistStorage
 import com.example.karaoke.model.Track
@@ -15,6 +19,7 @@ import com.example.karaoke.audio.AudioEngine
 import com.example.karaoke.audio.EngineType
 import com.example.karaoke.audio.JavaFXAudioEngine
 import com.example.karaoke.audio.TarsosAudioEngine
+import com.example.karaoke.audio.extractWaveform
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -64,6 +69,9 @@ fun main() = application {
             var pitch by remember { mutableStateOf(0f) }
             val tapTimes = remember { mutableStateListOf<Long>() }
             var tapRunning by remember { mutableStateOf(false) }
+            var waveform by remember { mutableStateOf<List<Float>>(emptyList()) }
+            var rmsLevel by remember { mutableStateOf(0f) }
+            var peakLevel by remember { mutableStateOf(0f) }
 
             LaunchedEffect(engineType) {
                 val pos = currentTime
@@ -71,6 +79,10 @@ fun main() = application {
                 audioEngine = when (engineType) {
                     EngineType.JavaFX -> JavaFXAudioEngine()
                     EngineType.TarsosDSP -> TarsosAudioEngine()
+                }
+                audioEngine.setLevelListener { rms, peak ->
+                    rmsLevel = rms
+                    peakLevel = peak
                 }
                 if (currentTrackIndex in playlist.indices) {
                     val track = playlist[currentTrackIndex]
@@ -80,6 +92,14 @@ fun main() = application {
                     audioEngine.seek(pos)
                     if (isPlaying) audioEngine.play()
                 }
+            }
+
+            LaunchedEffect(currentTrackIndex) {
+                waveform = if (currentTrackIndex in playlist.indices) {
+                    withContext(Dispatchers.IO) {
+                        extractWaveform(File(playlist[currentTrackIndex].audioPath))
+                    }
+                } else emptyList()
             }
 
             LaunchedEffect(isPlaying, currentTrackIndex, audioEngine) {
@@ -138,20 +158,35 @@ fun main() = application {
                 )
             }
 
-            Row {
-                PlaylistPanel(
-                    tracks = playlist,
-                    currentIndex = currentTrackIndex,
-                    onPlay = { index ->
-                        currentTrackIndex = index
-                        currentTime = 0L
-                        val track = playlist[index]
-                        audioEngine.load(File(track.audioPath))
-                        audioEngine.setTempo(tempo)
-                        audioEngine.setPitch(pitch)
-                        audioEngine.play()
-                        isPlaying = true
-                    },
+            Column {
+                if (currentTrackIndex in playlist.indices) {
+                    val duration = playlist[currentTrackIndex].durationMs
+                    WaveformView(
+                        waveform = waveform,
+                        positionMs = currentTime,
+                        durationMs = duration,
+                        onSeek = { pos ->
+                            currentTime = pos
+                            audioEngine.seek(pos)
+                        },
+                        modifier = Modifier.fillMaxWidth().height(60.dp)
+                    )
+                }
+
+                Row {
+                    PlaylistPanel(
+                        tracks = playlist,
+                        currentIndex = currentTrackIndex,
+                        onPlay = { index ->
+                            currentTrackIndex = index
+                            currentTime = 0L
+                            val track = playlist[index]
+                            audioEngine.load(File(track.audioPath))
+                            audioEngine.setTempo(tempo)
+                            audioEngine.setPitch(pitch)
+                            audioEngine.play()
+                            isPlaying = true
+                        },
                     onAdd = {
                         playlist.add(it)
                         savePlaylist()
@@ -198,42 +233,45 @@ fun main() = application {
                         }
                     },
                     modifier = Modifier.width(200.dp)
-                )
+                    )
 
-                LyricView(
-                    lyrics = lyrics,
-                    currentTime = currentTime,
-                    modifier = Modifier.weight(1f),
-                    onLineClick = { line ->
-                        currentTime = line.timeMillis
-                        audioEngine.seek(line.timeMillis)
-                    }
-                )
-                Column(modifier = Modifier.width(200.dp).padding(8.dp)) {
-                    Text("Engine: ${engineType.name}")
-                    Row {
-                        Button(onClick = { engineType = EngineType.JavaFX }) { Text("JavaFX") }
-                        Spacer(Modifier.width(4.dp))
-                        Button(onClick = { engineType = EngineType.TarsosDSP }) { Text("TarsosDSP") }
-                    }
-                    Text("Tempo: ${"%.2f".format(tempo)}x")
-                    Slider(
-                        value = tempo,
-                        onValueChange = {
-                            tempo = it
-                            audioEngine.setTempo(it)
-                        },
-                        valueRange = 0.5f..1.5f
+                    LyricView(
+                        lyrics = lyrics,
+                        currentTime = currentTime,
+                        modifier = Modifier.weight(1f),
+                        onLineClick = { line ->
+                            currentTime = line.timeMillis
+                            audioEngine.seek(line.timeMillis)
+                        }
                     )
-                    Text("Pitch: ${"%.1f".format(pitch)} st")
-                    Slider(
-                        value = pitch,
-                        onValueChange = {
-                            pitch = it
-                            audioEngine.setPitch(it)
-                        },
-                        valueRange = -6f..6f
-                    )
+                    Column(modifier = Modifier.width(200.dp).padding(8.dp)) {
+                        Text("Engine: ${engineType.name}")
+                        Row {
+                            Button(onClick = { engineType = EngineType.JavaFX }) { Text("JavaFX") }
+                            Spacer(Modifier.width(4.dp))
+                            Button(onClick = { engineType = EngineType.TarsosDSP }) { Text("TarsosDSP") }
+                        }
+                        Text("Tempo: ${"%.2f".format(tempo)}x")
+                        Slider(
+                            value = tempo,
+                            onValueChange = {
+                                tempo = it
+                                audioEngine.setTempo(it)
+                            },
+                            valueRange = 0.5f..1.5f
+                        )
+                        Text("Pitch: ${"%.1f".format(pitch)} st")
+                        Slider(
+                            value = pitch,
+                            onValueChange = {
+                                pitch = it
+                                audioEngine.setPitch(it)
+                            },
+                            valueRange = -6f..6f
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        LevelMeter(rmsLevel, peakLevel, modifier = Modifier.fillMaxWidth().height(60.dp))
+                    }
                 }
             }
         }
